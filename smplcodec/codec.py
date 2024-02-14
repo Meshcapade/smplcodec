@@ -41,11 +41,11 @@ class SMPLCodec:
     end_seconds: Optional[float] = None
 
     # pose / motion data
-    body_translation: Optional[ArrayLike] = None    # [N x 3] Global trans
-    body_pose: Optional[ArrayLike] = None           # [N x 22 x 3] pelvis..right_wrist
-    head_pose: Optional[ArrayLike] = None           # [N x 3 x 3] jaw, leftEye, rightEye
-    left_hand_pose: Optional[ArrayLike] = None       # [N x 15 x 3] left_index1..left_thumb3
-    right_hand_pose: Optional[ArrayLike] = None      # [N x 15 x 3] right_index1..right_thumb3
+    body_translation: Optional[ArrayLike] = None  # [N x 3] Global trans
+    body_pose: Optional[ArrayLike] = None  # [N x 22 x 3] pelvis..right_wrist
+    head_pose: Optional[ArrayLike] = None  # [N x 3 x 3] jaw, leftEye, rightEye
+    left_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] left_index1..left_thumb3
+    right_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] right_index1..right_thumb3
 
     def __post_init__(self):
         self.validate()
@@ -78,11 +78,30 @@ class SMPLCodec:
             assert self.start_seconds is None or isinstance(self.start_seconds, float)
             assert self.end_seconds is None or isinstance(self.end_seconds, float)
 
-            assert self.body_translation is None or self.body_translation.shape == (self.frame_count, 3)
-            assert self.body_pose is None or self.body_pose.shape == (self.frame_count, 22, 3)
-            assert self.head_pose is None or self.head_pose.shape == (self.frame_count, 3, 3)
-            assert self.left_hand_pose is None or self.left_hand_pose.shape == (self.frame_count, 15, 3)
-            assert self.right_hand_pose is None or self.right_hand_pose.shape == (self.frame_count, 15, 3)
+            assert self.body_translation is None or self.body_translation.shape == (
+                self.frame_count,
+                3,
+            )
+            assert self.body_pose is None or self.body_pose.shape == (
+                self.frame_count,
+                22,
+                3,
+            )
+            assert self.head_pose is None or self.head_pose.shape == (
+                self.frame_count,
+                3,
+                3,
+            )
+            assert self.left_hand_pose is None or self.left_hand_pose.shape == (
+                self.frame_count,
+                15,
+                3,
+            )
+            assert self.right_hand_pose is None or self.right_hand_pose.shape == (
+                self.frame_count,
+                15,
+                3,
+            )
 
         except (ValueError, AssertionError) as e:
             raise TypeError("Failed to validate SMPL Codec object") from e

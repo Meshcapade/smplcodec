@@ -15,6 +15,9 @@ pytest = "^8.0.0"
 ruff = "^0.2.1"
 pylyzer = "^0.0.51"
 
+[tool.ruff]
+line-length = 120
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
