@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Not committing lock file as this is a (tiny) library.
+# See https://python-poetry.org/docs/basic-usage/#as-a-library-developer
+poetry.lock
+
 # C extensions
 *.so
 
