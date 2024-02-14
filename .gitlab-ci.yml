@@ -1,0 +1,30 @@
+image: python:3.10.13
+
+stages:
+  - build
+  - publish
+
+default:
+  before_script: 
+    - pip install --no-cache-dir poetry==1.7.1
+    - ls
+
+build-job:
+  stage: build
+  script:
+    - poetry build --no-interaction --no-ansi
+    - ls
+    - ls dist/
+  artifacts:
+    paths:
+    - dist/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+
+publish-private:
+  stage: publish
+  script:
+    - poetry publish --username=gitlab-ci-token --password=${CI_JOB_TOKEN} --repository=${CI_API_V4_URL}/projects/53021447/packages/pypi
+  rules:
+    - if: $CI_COMMIT_TAG
