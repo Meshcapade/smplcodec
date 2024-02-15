@@ -32,15 +32,11 @@ class SMPLCodec:
     smpl_version: SMPLVersion = SMPLVersion.SMPLX
     gender: SMPLGender = SMPLGender.NEUTRAL
 
-    shape_parameters: Optional[ArrayLike] = None
+    shape_parameters: Optional[ArrayLike] = None  # [10-300] betas
 
     # motion metadata
     frame_count: Optional[int] = None
     frame_rate: Optional[float] = None
-
-    # optional time-slice
-    start_seconds: Optional[float] = None
-    end_seconds: Optional[float] = None
 
     # pose / motion data
     body_translation: Optional[ArrayLike] = None  # [N x 3] Global trans
@@ -70,40 +66,33 @@ class SMPLCodec:
             self.smplVersion = SMPLVersion(self.smpl_version)
             self.gender = SMPLGender(self.gender)
 
-            assert self.shape_parameters is None or len(self.shape_parameters.shape) == 1
+            if self.shape_parameters is not None:
+                assert len(self.shape_parameters.shape) == 1, "Bad shape_parameters"
 
             if self.frame_count is not None:
-                assert isinstance(self.frame_count, int)
+                assert isinstance(self.frame_count, int), "frame_count should be int"
                 if self.frame_count > 1:
-                    assert isinstance(self.frame_rate, float)
+                    assert isinstance(self.frame_rate, float), "frame_rate should be float"
 
-            assert self.start_seconds is None or isinstance(self.start_seconds, float)
-            assert self.end_seconds is None or isinstance(self.end_seconds, float)
+                for attr, shape in [
+                    ("body_translation", (self.frame_count, 3)),
+                    ("body_pose", (self.frame_count, 22, 3)),
+                    ("head_pose", (self.frame_count, 3, 3)),
+                    ("left_hand_pose", (self.frame_count, 15, 3)),
+                    ("right_hand_pose", (self.frame_count, 15, 3)),
+                ]:
+                    value = getattr(self, attr)
+                    if value is not None:
+                        assert getattr(self, attr).shape == shape, f"{attr} shape should be {shape}"
+            else:
+                for attr in (
+                    "body_translation",
+                    "body_pose",
+                    "head_pose",
+                    "left_hand_pose",
+                    "right_hand_pose",
+                ):
+                    assert getattr(self, attr) is None, f"{attr} exists but no frame_count"
 
-            assert self.body_translation is None or self.body_translation.shape == (
-                self.frame_count,
-                3,
-            )
-            assert self.body_pose is None or self.body_pose.shape == (
-                self.frame_count,
-                22,
-                3,
-            )
-            assert self.head_pose is None or self.head_pose.shape == (
-                self.frame_count,
-                3,
-                3,
-            )
-            assert self.left_hand_pose is None or self.left_hand_pose.shape == (
-                self.frame_count,
-                15,
-                3,
-            )
-            assert self.right_hand_pose is None or self.right_hand_pose.shape == (
-                self.frame_count,
-                15,
-                3,
-            )
-
-        except (ValueError, AssertionError) as e:
-            raise TypeError("Failed to validate SMPL Codec object") from e
+        except (AttributeError, ValueError, AssertionError) as e:
+            raise TypeError(f"Failed to validate SMPL Codec object: {e}") from e
