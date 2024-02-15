@@ -7,6 +7,8 @@ stages:
 default:
   before_script: 
     - pip install --no-cache-dir poetry==1.7.1
+    - poetry config --local repositories.gitlab https://gitlab.com/api/v4/projects/53021447/packages/pypi
+    - poetry config --local virtualenvs.in-project true
     - ls --recursive
 
 run-tests:

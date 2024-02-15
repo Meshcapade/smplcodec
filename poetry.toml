@@ -1,5 +1,0 @@
-[repositories.gitlab]
-url = "https://gitlab.com/api/v4/projects/53021447/packages/pypi"
-
-[virtualenvs]
-in-project = true
