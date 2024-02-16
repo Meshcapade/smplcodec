@@ -39,6 +39,12 @@ def test_full_pose():
     assert a.full_pose.shape == (601, 55, 3)
 
 
+def test_single_pose():
+    a = SMPLCodec.from_file(TESTDIR / "pose_avatar.smpl")
+    assert a.full_pose.shape == (1, 55, 3)
+    assert a.body_translation is None
+
+
 @pytest.mark.parametrize(
     "params",
     [

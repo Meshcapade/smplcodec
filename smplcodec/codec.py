@@ -36,6 +36,7 @@ JOINTS = {
     }
 }
 
+
 @dataclass
 class SMPLCodec:
     smpl_version: SMPLVersion = SMPLVersion.SMPLX
@@ -99,12 +100,8 @@ class SMPLCodec:
                 if self.frame_count > 1:
                     assert isinstance(self.frame_rate, float), "frame_rate should be float"
 
-                for attr, shape in [
-                    ("body_translation", (self.frame_count, 3)),
-                    ("body_pose", (self.frame_count, 22, 3)),
-                    ("head_pose", (self.frame_count, 3, 3)),
-                    ("left_hand_pose", (self.frame_count, 15, 3)),
-                    ("right_hand_pose", (self.frame_count, 15, 3)),
+                for attr, shape in [("body_translation", (self.frame_count, 3))] + [
+                    (key, (self.frame_count, num, 3)) for key, num in JOINTS[self.smpl_version].items()
                 ]:
                     value = getattr(self, attr)
                     if value is not None:
