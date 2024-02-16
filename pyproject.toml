@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "smplcodec"
+version = "0.3.1"
+description = "A library to read and write .smpl avatar files"
+authors = ["Talha Zaman <talha@meshcapade.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+numpy = "^1.24.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+ruff = "^0.2.1"
+pylyzer = "^0.0.51"
+
+[tool.ruff]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
