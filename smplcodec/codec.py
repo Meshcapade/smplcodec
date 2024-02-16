@@ -27,6 +27,15 @@ class SMPLGender(IntEnum):
     FEMALE = 2
 
 
+JOINTS = {
+    SMPLVersion.SMPLX: {
+        "body_pose": 22,
+        "head_pose": 3,
+        "left_hand_pose": 15,
+        "right_hand_pose": 15,
+    }
+}
+
 @dataclass
 class SMPLCodec:
     smpl_version: SMPLVersion = SMPLVersion.SMPLX
@@ -44,6 +53,22 @@ class SMPLCodec:
     head_pose: Optional[ArrayLike] = None  # [N x 3 x 3] jaw, leftEye, rightEye
     left_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] left_index1..left_thumb3
     right_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] right_index1..right_thumb3
+
+    @property
+    def full_pose(self) -> ArrayLike:
+        """Create and return the full_pose [frame_count x num_joints x 3].
+        If frame_count is 0 or None it is assumed to be 1 instead.
+        This function will always return a full pose array, if any pose
+        information is missing it will be filled with zeros automatic.
+        """
+        count = self.frame_count or 1
+        pose = np.empty((count, 0, 3))
+        for part, num_joints in JOINTS[self.smpl_version].items():
+            part_pose = getattr(self, part)
+            if part_pose is None:
+                part_pose = np.zeros((count, num_joints, 3))
+            pose = np.append(pose, part_pose, axis=1)
+        return pose
 
     def __post_init__(self):
         self.validate()
