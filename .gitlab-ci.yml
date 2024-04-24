@@ -1,8 +1,15 @@
 image: python:3.10.13
 
 stages:
+  - semgrep
   - test
   - publish
+
+include:
+  - project: 'meshcapade/cicd'
+    ref: 0.0.20
+    file:
+      - 'semgrep.gitlab-ci.yml'
 
 default:
   before_script: 
