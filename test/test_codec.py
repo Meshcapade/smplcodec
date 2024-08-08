@@ -33,6 +33,19 @@ def test_read_sample():
     assert a.body_translation.shape == (601, 3)
 
 
+def test_read_sample_smplpp():
+    a = SMPLCodec.from_file(TESTDIR / "avatar_smplpp.smpl")
+    assert a.smpl_version == SMPLVersion.SMPLPP
+    assert a.gender == SMPLGender.MALE
+
+    assert a.shape_parameters.shape == (10,)
+    assert a.frame_count == 601
+    assert a.frame_rate == 120.0
+
+    assert a.body_pose.shape == (601, 46)
+    assert a.body_translation.shape == (601, 3)
+
+
 def test_full_pose():
     s = SMPLCodec()
     assert s.full_pose.shape == (1, 55, 3)
@@ -69,7 +82,7 @@ def test_validate_succeeds(params):
         {"something_unexpected": None},
         {"smpl_version": None},
         {"smpl_version": -1},
-        {"smpl_version": 4},
+        {"smpl_version": 5},
         {"smpl_gender": -1},
         {"shape_parameters": "something"},
         {"shape_parameters": np.zeros((5, 5))},
