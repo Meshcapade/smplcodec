@@ -20,6 +20,7 @@ class SMPLVersion(IntEnum):
     SMPLH = 1
     SMPLX = 2
     SUPR = 3
+    SMPLPP = 4
 
 
 class SMPLGender(IntEnum):
@@ -28,13 +29,21 @@ class SMPLGender(IntEnum):
     FEMALE = 2
 
 
+@dataclass
+class PoseParameterSizes:
+    body_pose: tuple = None
+    head_pose: Optional[tuple] = None
+    left_hand_pose: Optional[tuple] = None
+    right_hand_pose: Optional[tuple] = None
+
 JOINTS = {
-    SMPLVersion.SMPLX: {
-        "body_pose": 22,
-        "head_pose": 3,
-        "left_hand_pose": 15,
-        "right_hand_pose": 15,
-    }
+    # all tuples
+    SMPLVersion.SMPLX: PoseParameterSizes(body_pose=(22, 3),
+                                          head_pose=(3,3),
+                                          left_hand_pose=(15, 3),
+                                          right_hand_pose=(15, 3)),
+    
+    SMPLVersion.SMPLPP: PoseParameterSizes(body_pose=(46,))
 }
 
 
@@ -67,10 +76,10 @@ class SMPLCodec:
         """
         count = self.frame_count or 1
         pose = np.empty((count, 0, 3))
-        for part, num_joints in JOINTS[self.smpl_version].items():
-            part_pose = getattr(self, part)
+        for field in fields(JOINTS[self.smpl_version]):
+            part_pose = getattr(self, field.name)
             if part_pose is None:
-                part_pose = np.zeros((count, num_joints, 3))
+                part_pose = np.zeros(((count,) + getattr(JOINTS[self.smpl_version], field.name))) # merge tuples for shape
             pose = np.append(pose, part_pose, axis=1)
         return pose
 
@@ -108,7 +117,7 @@ class SMPLCodec:
                     assert isinstance(self.frame_rate, float), "frame_rate should be float"
 
                 for attr, shape in [("body_translation", (self.frame_count, 3))] + [
-                    (key, (self.frame_count, num, 3)) for key, num in JOINTS[self.smpl_version].items()
+                    (field.name, ((self.frame_count,) + getattr(JOINTS[self.smpl_version], field.name))) for field in fields(JOINTS[self.smpl_version]) if getattr(JOINTS[self.smpl_version], field.name) is not None
                 ]:
                     value = getattr(self, attr)
                     if value is not None:
