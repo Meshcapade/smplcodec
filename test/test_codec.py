@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+
 from pathlib import Path
 from smplcodec import SMPLCodec, SMPLGender, SMPLVersion
 

@@ -8,6 +8,7 @@ from typing import Optional
 from numpy.typing import ArrayLike
 
 from .utils import extract_item, coerce_type, matching, to_camel, to_snake
+from .version import MAJOR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -39,10 +40,12 @@ JOINTS = {
 
 @dataclass
 class SMPLCodec:
+    codec_version: int = MAJOR
     smpl_version: SMPLVersion = SMPLVersion.SMPLX
     gender: SMPLGender = SMPLGender.NEUTRAL
 
     shape_parameters: Optional[ArrayLike] = None  # [10-300] betas
+    expression_parameters: Optional[ArrayLike] = None  # [10-100] FLAME parameters
 
     # motion metadata
     frame_count: Optional[int] = None
@@ -80,16 +83,20 @@ class SMPLCodec:
     @classmethod
     def from_file(cls, filename):
         with closing(np.load(filename)) as infile:
-            return cls(**{to_snake(k): extract_item(v) for (k, v) in dict(infile).items()})
+            data = {to_snake(k): extract_item(v) for (k, v) in dict(infile).items()}
+            if "codec_version" not in data:
+                data["codec_version"] = 1
+        return cls(**data)
 
     def write(self, filename):
+        self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
         with open(filename, "wb") as outfile:
             np.savez_compressed(outfile, **data)
 
     def validate(self):
         try:
-            self.smplVersion = SMPLVersion(self.smpl_version)
+            self.smpl_version = SMPLVersion(self.smpl_version)
             self.gender = SMPLGender(self.gender)
 
             if self.shape_parameters is not None:
