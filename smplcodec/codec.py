@@ -43,6 +43,7 @@ class SMPLCodec:
     gender: SMPLGender = SMPLGender.NEUTRAL
 
     shape_parameters: Optional[ArrayLike] = None  # [10-300] betas
+    expression_parameters: Optional[ArrayLike] = None  # [10-100] FLAME parameters
 
     # motion metadata
     frame_count: Optional[int] = None
@@ -83,13 +84,14 @@ class SMPLCodec:
             return cls(**{to_snake(k): extract_item(v) for (k, v) in dict(infile).items()})
 
     def write(self, filename):
+        self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
         with open(filename, "wb") as outfile:
             np.savez_compressed(outfile, **data)
 
     def validate(self):
         try:
-            self.smplVersion = SMPLVersion(self.smpl_version)
+            self.smpl_version = SMPLVersion(self.smpl_version)
             self.gender = SMPLGender(self.gender)
 
             if self.shape_parameters is not None:
