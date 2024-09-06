@@ -61,7 +61,7 @@ def test_read_sample_skel():
 
 def test_read_amass_sample_smplx():
     a = SMPLCodec.from_amass_npz(TESTDIR / "apose_to_handsFront_smplx.npz")
-    
+
     assert a.smpl_version == SMPLVersion.SMPLX
     assert a.gender == SMPLGender.NEUTRAL
 
