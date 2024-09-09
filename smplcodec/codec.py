@@ -24,22 +24,11 @@ class SMPLVersion(IntEnum):
     SKEL = 5
 
     @classmethod
-    def from_string(cls, input: str):
-        # use lower to allow different cases
-        if input.lower() == "smpl":
-            return cls.SMPL
-        elif input.lower() == "smplh":
-            return cls.SMPLH
-        elif input.lower() == "smplx":
-            return cls.SMPLX
-        elif input.lower() == "supr":
-            return cls.SUPR
-        elif input.lower() == "smplpp":
-            return cls.SMPLPP
-        elif input.lower() == "skel":
-            return cls.SKEL
-
-        return None
+    def from_string(cls, value: str):
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            raise ValueError(f'invalid model name {value}')
 
 
 class SMPLGender(IntEnum):
