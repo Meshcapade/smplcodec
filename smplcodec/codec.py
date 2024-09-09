@@ -37,16 +37,11 @@ class SMPLGender(IntEnum):
     FEMALE = 2
 
     @classmethod
-    def from_string(cls, input: str):
-        # use lower to allow different cases
-        if input.lower() == "neutral":
-            return cls.NEUTRAL
-        elif input.lower() == "male":
-            return cls.MALE
-        elif input.lower() == "female":
-            return cls.FEMALE
-
-        return None
+    def from_string(cls, value: str):
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            raise ValueError(f'invalid gender {value}')
 
 
 @dataclass
