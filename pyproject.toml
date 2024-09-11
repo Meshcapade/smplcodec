@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "smplcodec"
-version = "1.0.0"
+version = "2.0.0"
 description = "A library to read and write .smpl avatar files"
 authors = ["Talha Zaman <talha@meshcapade.com>"]
 license = "MIT"
