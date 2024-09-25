@@ -102,12 +102,13 @@ class SMPLCodec:
         count = self.frame_count or 1
         pose = np.empty((count, 0, 3))
         for field in fields(SMPLParamStructure[self.smpl_version]):
-            part_pose = getattr(self, field.name)
-            if part_pose is None:
-                part_pose = np.zeros(
-                    ((count,) + getattr(SMPLParamStructure[self.smpl_version], field.name))
-                )  # merge tuples for shape
-            pose = np.append(pose, part_pose, axis=1)
+            if getattr(SMPLParamStructure[self.smpl_version], field.name) is not None:
+                part_pose = getattr(self, field.name)
+                if part_pose is None:
+                    part_pose = np.zeros(
+                        ((count,) + getattr(SMPLParamStructure[self.smpl_version], field.name))
+                    )  # merge tuples for shape
+                pose = np.append(pose, part_pose, axis=1)
         return pose
 
     def __post_init__(self):
