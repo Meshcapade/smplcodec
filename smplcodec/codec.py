@@ -5,9 +5,8 @@ from contextlib import closing
 from dataclasses import dataclass, asdict, fields
 from enum import IntEnum
 from typing import Optional
-from numpy.typing import ArrayLike
 
-from .utils import extract_item, coerce_type, matching, to_camel, to_snake
+from .utils import extract_item, coerce_type, matching, to_camel, to_snake, PathType
 from .version import MAJOR
 
 
@@ -28,7 +27,7 @@ class SMPLVersion(IntEnum):
         try:
             return cls[value.upper()]
         except KeyError:
-            raise ValueError(f'invalid model name {value}')
+            raise ValueError(f"invalid model name {value}")
 
 
 class SMPLGender(IntEnum):
@@ -41,12 +40,12 @@ class SMPLGender(IntEnum):
         try:
             return cls[value.upper()]
         except KeyError:
-            raise ValueError(f'invalid gender {value}')
+            raise ValueError(f"invalid gender {value}")
 
 
 @dataclass
 class PoseParameterSizes:
-    body_pose: tuple = None
+    body_pose: tuple
     head_pose: Optional[tuple] = None
     left_hand_pose: Optional[tuple] = None
     right_hand_pose: Optional[tuple] = None
@@ -63,7 +62,7 @@ SMPLParamStructure = {
         body_pose=(22, 3),
         head_pose=(3, 3),
         left_hand_pose=(15, 3),
-        right_hand_pose=(15, 3),  # ,
+        right_hand_pose=(15, 3),
         # left_foot_pose=(10, 3),
         # righ_foot_pose=(10,3),
     ),
@@ -78,22 +77,22 @@ class SMPLCodec:
     smpl_version: SMPLVersion = SMPLVersion.SMPLX
     gender: SMPLGender = SMPLGender.NEUTRAL
 
-    shape_parameters: Optional[ArrayLike] = None  # [10-300] betas
-    expression_parameters: Optional[ArrayLike] = None  # [10-100] FLAME parameters
+    shape_parameters: Optional[np.ndarray] = None  # [10-300] betas
 
     # motion metadata
     frame_count: Optional[int] = None
     frame_rate: Optional[float] = None
 
-    # pose / motion data
-    body_translation: Optional[ArrayLike] = None  # [N x 3] Global trans
-    body_pose: Optional[ArrayLike] = None  # [N x 22 x 3] pelvis..right_wrist
-    head_pose: Optional[ArrayLike] = None  # [N x 3 x 3] jaw, leftEye, rightEye
-    left_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] left_index1..left_thumb3
-    right_hand_pose: Optional[ArrayLike] = None  # [N x 15 x 3] right_index1..right_thumb3
+    # pose / motion data for frame_count=N frames
+    body_translation: Optional[np.ndarray] = None  # [N x 3] Global trans
+    body_pose: Optional[np.ndarray] = None  # [N x 22 x 3] pelvis..right_wrist
+    head_pose: Optional[np.ndarray] = None  # [N x 3 x 3] jaw, leftEye, rightEye
+    left_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] left_index1..left_thumb3
+    right_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] right_index1..right_thumb3
+    expression_parameters: Optional[np.ndarray] = None  # [N x 10-100] FLAME parameters
 
     @property
-    def full_pose(self) -> ArrayLike:
+    def full_pose(self) -> np.ndarray:
         """Create and return the full_pose [frame_count x num_joints x 3].
         If frame_count is 0 or None it is assumed to be 1 instead.
         This function will always return a full pose array, if any pose
@@ -118,15 +117,15 @@ class SMPLCodec:
         return all(matching(getattr(self, f.name), getattr(other, f.name)) for f in fields(self))
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename: PathType):
         with closing(np.load(filename)) as infile:
             data = {to_snake(k): extract_item(v) for (k, v) in dict(infile).items()}
             if "codec_version" not in data:
-                data["codec_version"] = 1
-        return cls(**data)
+                data["codec_version"] = 1  # type: ignore
+        return cls(**data)  # type: ignore
 
     @classmethod
-    def from_amass_npz(cls, filename: str, smpl_version_str: str = "smplx"):
+    def from_amass_npz(cls, filename: PathType, smpl_version_str: str = "smplx"):
         with closing(np.load(filename, allow_pickle=True)) as infile:
             in_dict = dict(infile)
 

@@ -16,6 +16,11 @@ semver = "^3.0.2"
 pytest = "^8.0.0"
 ruff = "^0.2.1"
 pylyzer = "^0.0.51"
+pyright = "^1.1.380"
+
+[tool.pyright]
+include = ["smplcodec", "test"]
+reportUnsupportedDunderAll = "none"
 
 [tool.ruff]
 line-length = 120
