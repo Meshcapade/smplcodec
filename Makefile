@@ -22,7 +22,8 @@ test: ## run unit tests
 > poetry run pytest
 
 .PHONY: check
-check: ## run linter and formatter in "report mode"
+check: ## run typechecker, linter and formatter in "report mode"
+> poetry run pyright
 > poetry run ruff check
 > poetry run ruff format --check
 

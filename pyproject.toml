@@ -1,21 +1,26 @@
 [tool.poetry]
 name = "smplcodec"
-version = "2.0.1"
+version = "2.0.2"
 description = "A library to read and write .smpl avatar files"
 authors = ["Talha Zaman <talha@meshcapade.com>"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-numpy = "^1.24.2"
-tomli = "^2.0.1"
-semver = "^3.0.2"
+python = ">=3.9"
+numpy = ">=1.24"
+tomli = ">=2.0"
+semver = ">=3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 ruff = "^0.2.1"
 pylyzer = "^0.0.51"
+pyright = "^1.1.380"
+
+[tool.pyright]
+include = ["smplcodec", "test"]
+reportUnsupportedDunderAll = "none"
 
 [tool.ruff]
 line-length = 120

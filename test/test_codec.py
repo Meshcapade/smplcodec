@@ -25,11 +25,14 @@ def test_read_sample():
     assert a.smpl_version == SMPLVersion.SMPLX
     assert a.gender == SMPLGender.NEUTRAL
 
+    assert a.shape_parameters is not None
     assert a.shape_parameters.shape == (16,)
     assert a.frame_count == 601
     assert a.frame_rate == 120.0
 
+    assert a.body_pose is not None
     assert a.body_pose.shape == (601, 22, 3)
+    assert a.body_translation is not None
     assert a.body_translation.shape == (601, 3)
 
 
@@ -38,11 +41,14 @@ def test_read_sample_smplpp():
     assert a.smpl_version == SMPLVersion.SMPLPP
     assert a.gender == SMPLGender.MALE
 
+    assert a.shape_parameters is not None
     assert a.shape_parameters.shape == (10,)
     assert a.frame_count == 601
     assert a.frame_rate == 120.0
 
+    assert a.body_pose is not None
     assert a.body_pose.shape == (601, 46)
+    assert a.body_translation is not None
     assert a.body_translation.shape == (601, 3)
 
 
@@ -51,11 +57,14 @@ def test_read_sample_skel():
     assert a.smpl_version == SMPLVersion.SKEL
     assert a.gender == SMPLGender.MALE
 
+    assert a.shape_parameters is not None
     assert a.shape_parameters.shape == (10,)
     assert a.frame_count == 601
     assert a.frame_rate == 120.0
 
+    assert a.body_pose is not None
     assert a.body_pose.shape == (601, 46)
+    assert a.body_translation is not None
     assert a.body_translation.shape == (601, 3)
 
 
@@ -65,11 +74,14 @@ def test_read_amass_sample_smplx():
     assert a.smpl_version == SMPLVersion.SMPLX
     assert a.gender == SMPLGender.NEUTRAL
 
+    assert a.shape_parameters is not None
     assert a.shape_parameters.shape == (10,)
     assert a.frame_count == 34
     assert a.frame_rate == 60.0
 
+    assert a.body_pose is not None
     assert a.body_pose.shape == (34, 22, 3)
+    assert a.body_translation is not None
     assert a.body_translation.shape == (34, 3)
 
 

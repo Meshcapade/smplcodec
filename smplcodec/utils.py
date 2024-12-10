@@ -1,7 +1,13 @@
 import numpy as np
+import os
+
+from typing import Optional, Union
+from numpy.typing import ArrayLike
+
+PathType = Union[str, bytes, os.PathLike]
 
 
-def extract_item(thing):
+def extract_item(thing: Optional[np.ndarray]) -> Union[None, np.ndarray]:
     if thing is None:
         return None
     if thing.shape == ():
@@ -9,9 +15,7 @@ def extract_item(thing):
     return thing
 
 
-def coerce_type(thing):
-    if thing is None:
-        return None
+def coerce_type(thing: Union[int, float, ArrayLike]) -> ArrayLike:
     if isinstance(thing, int):
         return np.array(thing, dtype=np.int32)
     if isinstance(thing, float):
@@ -22,7 +26,7 @@ def coerce_type(thing):
     raise ValueError(f"Wrong kind of thing: {thing}")
 
 
-def matching(thing, other):
+def matching(thing, other) -> bool:
     if thing is None:
         return other is None
     if isinstance(thing, int) or isinstance(thing, float):
@@ -33,10 +37,10 @@ def matching(thing, other):
     return False
 
 
-def to_snake(name):
+def to_snake(name: str) -> str:
     return "".join(c if c.islower() else f"_{c.lower()}" for c in name).lstrip("_")
 
 
-def to_camel(name):
+def to_camel(name: str) -> str:
     first, *rest = name.split("_")
     return first + "".join(word.capitalize() for word in rest)
