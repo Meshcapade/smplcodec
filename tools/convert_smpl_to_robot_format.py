@@ -6,33 +6,13 @@ from smplcodec import SMPLCodec
 from smplx import SMPLX
 
 
-def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
-    """
-    Convert rotations given as axis/angle to quaternions.
-
-    Args:
-        axis_angle: Rotations given as a vector in axis angle form,
-            as a tensor of shape (..., 3), where the magnitude is
-            the angle turned anticlockwise in radians around the
-            vector's direction.
-
-    Returns:
-        quaternions with real part first, as tensor of shape (..., 4).
-    """
-    angles = torch.norm(axis_angle, p=2, dim=-1, keepdim=True)
-    sin_half_angles_over_angles = 0.5 * torch.sinc(angles * 0.5 / torch.pi)
-    return torch.cat(
-        [torch.cos(angles * 0.5), axis_angle * sin_half_angles_over_angles], dim=-1
-    )
-
-
 def smpl_to_robot_dict(smplcdc: SMPLCodec,
                        model_path: str):
     '''
     Convert standard SMPLCodec data to "robot-friendly" data (dict containing numpy arrays)
     '''
-        
-    # load model
+    from scipy.spatial.transform import Rotation as R
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dtype = torch.float32
 
@@ -107,16 +87,16 @@ def smpl_to_robot_dict(smplcdc: SMPLCodec,
         
         # _Body Orientations_: Shape: [number of frames, number of body parts, 3 or 4](Either roll, pitch, yaw or quaternion values for each keypoint.)
         # convert to quaternions
-        body_orient_array[i] = np.concatenate((axis_angle_to_quaternion(pose.reshape(-1,3)).detach().cpu().numpy().squeeze(),
-                                               axis_angle_to_quaternion(head_pose.reshape(-1,3)).detach().cpu().numpy().squeeze(),
-                                               axis_angle_to_quaternion(left_hand_pose.reshape(-1,3)).detach().cpu().numpy().squeeze(),
-                                               axis_angle_to_quaternion(right_hand_pose.reshape(-1,3)).detach().cpu().numpy().squeeze()))
+        body_orient_array[i] = np.concatenate((R.from_rotvec(pose.reshape(-1,3).detach().cpu().numpy().squeeze()).as_quat(),
+                                               R.from_rotvec(head_pose.reshape(-1,3).detach().cpu().numpy().squeeze()).as_quat(),
+                                               R.from_rotvec(left_hand_pose.reshape(-1,3).detach().cpu().numpy().squeeze()).as_quat(),
+                                               R.from_rotvec(right_hand_pose.reshape(-1,3).detach().cpu().numpy().squeeze()).as_quat()))
         
         # _Root Position_: Shape: [number of frames, 3](x, y, z position of the root.)
         root_position_array[i] = joints.detach().cpu().numpy().squeeze()[0]
         
         # _Root Orientation_: Shape: [number of frames, 3 or 4](Root orientation as roll, pitch, yaw or quaternion.)
-        root_orient_array[i] = axis_angle_to_quaternion(global_rot.reshape(-1,3)).detach().cpu().numpy().squeeze()
+        root_orient_array[i] = R.from_rotvec(global_rot.reshape(-1,3).detach().cpu().numpy().squeeze()).as_quat()
                                               
         # _Feet Contact_: Shape: [number of frames, 2 or 4](2 or 1 information contact for each foot.)
         
