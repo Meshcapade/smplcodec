@@ -71,6 +71,17 @@ SMPLParamStructure = {
 }
 
 
+SMPLVertexCount = {
+    # all tuples
+    SMPLVersion.SMPL: 6890,
+    SMPLVersion.SMPLH: 6890,
+    SMPLVersion.SMPLX: 10475,
+    SMPLVersion.SUPR: 10475,
+    SMPLVersion.SMPLPP: 35410,
+    SMPLVersion.SKEL: 6890,
+}
+
+
 @dataclass
 class SMPLCodec:
     codec_version: int = MAJOR
@@ -90,6 +101,9 @@ class SMPLCodec:
     left_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] left_index1..left_thumb3
     right_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] right_index1..right_thumb3
     expression_parameters: Optional[np.ndarray] = None  # [N x 10-100] FLAME parameters
+
+    # vertex offsets to represent details outside of shape space
+    vertex_offsets: Optional[np.ndarray] = None  # [vertex_count x 3]
 
     @property
     def full_pose(self) -> np.ndarray:
@@ -215,6 +229,9 @@ class SMPLCodec:
                     "right_hand_pose",
                 ):
                     assert getattr(self, attr) is None, f"{attr} exists but no frame_count"
+
+            if self.vertex_offsets is not None:
+                assert self.vertex_offsets.shape == (SMPLVertexCount[self.smpl_version], 3)
 
         except (AttributeError, ValueError, AssertionError) as e:
             raise TypeError(f"Failed to validate SMPL Codec object: {e}") from e
