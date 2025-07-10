@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.11"
 numpy = ">=1.24"
 tomli = ">=2.0"
 semver = ">=3.0"
@@ -15,7 +15,6 @@ semver = ">=3.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 ruff = "^0.2.1"
-pylyzer = "^0.0.51"
 pyright = "^1.1.380"
 
 [tool.pyright]
