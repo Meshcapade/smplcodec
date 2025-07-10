@@ -14,6 +14,14 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class PoseParameterSizes:
+    body_pose: tuple
+    head_pose: Optional[tuple] = None
+    left_hand_pose: Optional[tuple] = None
+    right_hand_pose: Optional[tuple] = None
+
+
 class SMPLVersion(IntEnum):
     SMPL = 0
     SMPLH = 1
@@ -29,6 +37,14 @@ class SMPLVersion(IntEnum):
         except KeyError:
             raise ValueError(f"invalid model name {value}")
 
+    @property
+    def vertex_count(self) -> int:
+        return SMPLVertexCount[self]
+
+    @property
+    def param_sizes(self) -> PoseParameterSizes:
+        return SMPLParamStructure[self]
+
 
 class SMPLGender(IntEnum):
     NEUTRAL = 0
@@ -43,16 +59,7 @@ class SMPLGender(IntEnum):
             raise ValueError(f"invalid gender {value}")
 
 
-@dataclass
-class PoseParameterSizes:
-    body_pose: tuple
-    head_pose: Optional[tuple] = None
-    left_hand_pose: Optional[tuple] = None
-    right_hand_pose: Optional[tuple] = None
-
-
 SMPLParamStructure = {
-    # all tuples
     SMPLVersion.SMPL: PoseParameterSizes(body_pose=(24, 3)),
     SMPLVersion.SMPLH: PoseParameterSizes(body_pose=(22, 3), left_hand_pose=(15, 3), right_hand_pose=(15, 3)),
     SMPLVersion.SMPLX: PoseParameterSizes(
@@ -63,8 +70,6 @@ SMPLParamStructure = {
         head_pose=(3, 3),
         left_hand_pose=(15, 3),
         right_hand_pose=(15, 3),
-        # left_foot_pose=(10, 3),
-        # righ_foot_pose=(10,3),
     ),
     SMPLVersion.SMPLPP: PoseParameterSizes(body_pose=(46,)),
     SMPLVersion.SKEL: PoseParameterSizes(body_pose=(46,)),
@@ -72,7 +77,6 @@ SMPLParamStructure = {
 
 
 SMPLVertexCount = {
-    # all tuples
     SMPLVersion.SMPL: 6890,
     SMPLVersion.SMPLH: 6890,
     SMPLVersion.SMPLX: 10475,
@@ -94,13 +98,13 @@ class SMPLCodec:
     frame_count: Optional[int] = None
     frame_rate: Optional[float] = None
 
-    # pose / motion data for frame_count=N frames
-    body_translation: Optional[np.ndarray] = None  # [N x 3] Global trans
-    body_pose: Optional[np.ndarray] = None  # [N x 22 x 3] pelvis..right_wrist
-    head_pose: Optional[np.ndarray] = None  # [N x 3 x 3] jaw, leftEye, rightEye
-    left_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] left_index1..left_thumb3
-    right_hand_pose: Optional[np.ndarray] = None  # [N x 15 x 3] right_index1..right_thumb3
-    expression_parameters: Optional[np.ndarray] = None  # [N x 10-100] FLAME parameters
+    # pose / motion data for frame_count frames
+    body_translation: Optional[np.ndarray] = None  # [frame_count x 3] Global trans
+    body_pose: Optional[np.ndarray] = None  # [frame_count x 22 x 3] pelvis..right_wrist
+    head_pose: Optional[np.ndarray] = None  # [frame_count x 3 x 3] jaw, leftEye, rightEye
+    left_hand_pose: Optional[np.ndarray] = None  # [frame_count x 15 x 3] left_index1..left_thumb3
+    right_hand_pose: Optional[np.ndarray] = None  # [frame_count x 15 x 3] right_index1..right_thumb3
+    expression_parameters: Optional[np.ndarray] = None  # [frame_count x 10-100] FLAME parameters
 
     # vertex offsets to represent details outside of shape space
     vertex_offsets: Optional[np.ndarray] = None  # [vertex_count x 3]
@@ -114,12 +118,12 @@ class SMPLCodec:
         """
         count = self.frame_count or 1
         pose = np.empty((count, 0, 3))
-        for field in fields(SMPLParamStructure[self.smpl_version]):
-            if getattr(SMPLParamStructure[self.smpl_version], field.name) is not None:
+        for field in fields(self.smpl_version.param_sizes):
+            if getattr(self.smpl_version.param_sizes, field.name) is not None:
                 part_pose = getattr(self, field.name)
                 if part_pose is None:
                     part_pose = np.zeros(
-                        ((count,) + getattr(SMPLParamStructure[self.smpl_version], field.name))
+                        ((count,) + getattr(self.smpl_version.param_sizes, field.name))
                     )  # merge tuples for shape
                 pose = np.append(pose, part_pose, axis=1)
         return pose
@@ -197,7 +201,7 @@ class SMPLCodec:
         self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
         with open(filename, "wb") as outfile:
-            np.savez_compressed(outfile, **data)
+            np.savez_compressed(outfile, **data)  # type: ignore
 
     def validate(self):
         try:
@@ -213,9 +217,9 @@ class SMPLCodec:
                     assert isinstance(self.frame_rate, float), "frame_rate should be float"
 
                 for attr, shape in [("body_translation", (self.frame_count, 3))] + [
-                    (field.name, ((self.frame_count,) + getattr(SMPLParamStructure[self.smpl_version], field.name)))
-                    for field in fields(SMPLParamStructure[self.smpl_version])
-                    if getattr(SMPLParamStructure[self.smpl_version], field.name) is not None
+                    (field.name, ((self.frame_count,) + getattr(self.smpl_version.param_sizes, field.name)))
+                    for field in fields(self.smpl_version.param_sizes)
+                    if getattr(self.smpl_version.param_sizes, field.name) is not None
                 ]:
                     value = getattr(self, attr)
                     if value is not None:
@@ -231,7 +235,7 @@ class SMPLCodec:
                     assert getattr(self, attr) is None, f"{attr} exists but no frame_count"
 
             if self.vertex_offsets is not None:
-                assert self.vertex_offsets.shape == (SMPLVertexCount[self.smpl_version], 3)
+                assert self.vertex_offsets.shape == (self.smpl_version.vertex_count, 3)
 
         except (AttributeError, ValueError, AssertionError) as e:
             raise TypeError(f"Failed to validate SMPL Codec object: {e}") from e
