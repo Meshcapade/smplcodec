@@ -98,6 +98,13 @@ def test_single_pose():
     assert a.body_translation is None
 
 
+def test_vertex_offsets():
+    a = SMPLCodec.from_file(TESTDIR / "avatar_vertexoffsets.smpl")
+    assert a.smpl_version.vertex_count == 10475
+    assert a.vertex_offsets is not None
+    assert a.vertex_offsets.shape == (a.smpl_version.vertex_count, 3)
+
+
 @pytest.mark.parametrize(
     "params",
     [
