@@ -1,6 +1,6 @@
 # SMPL Codec
 
-SMPLCodec is a minimal pure-Python library that provides a standardized way to read and write SMPL(-H/-X) parameters of bodies and animations as `.smpl` files.
+SMPLCodec is a minimal pure-Python library that provides a standardized way to read and write SMPL(-H/-X) parameters of bodies and animations as `.smpl` files, and export meshcapde scenes as `.mcs` files.
 
 See the [SMPL Wiki](https://meshcapade.wiki/SMPL) for a general description of the model, and the [SMPL-X](https://smpl-x.is.tue.mpg.de/) project page and [GitHub](https://github.com/vchoutas/smplx) for model data and code for the most commonly used version.
 
@@ -32,7 +32,34 @@ A `.smpl` files is simply an NPZ that follows some conventions. It is flat-struc
     b.write("neutral.smpl")
 ```
 
+## Meshcapade Scene (MCS) Export
+
+SMPLCodec also provides functionality to export meshcapade scenes as `.mcs` files (GLTF format with SMPL extensions). The class-based interface makes it easy to create scenes with custom cameras and SMPL bodies:
+
+```python
+from smplcodec.mcs import SceneExporter, CameraIntrinsics, CameraPose
+from smplcodec.codec import SMPLCodec
+import numpy as np
+
+# Create exporter
+exporter = SceneExporter()
+
+# Load SMPL data using SMPLCodec
+body = SMPLCodec.from_file("avatar.smpl")
+
+# Custom camera setup
+camera_intrinsics = CameraIntrinsics(focal_length=1000.0, principal_point=(640.0, 480.0))
+camera_pose = CameraPose(
+    rotation_matrix=np.eye(3, dtype=np.float32),
+    translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
+)
+
+# Export scene
+exporter.export_single_frame([body], "scene.mcs", camera_intrinsics, camera_pose)
+```
+
+For detailed documentation, see [MCS_INTERFACE_GUIDE.md](MCS_INTERFACE_GUIDE.md).
+
 ## License
 
 This library is released under the MIT license.
-
