@@ -198,10 +198,25 @@ class SMPLCodec:
             return cls(**mapped_dict)
 
     def write(self, filename):
+        """Write the SMPL data to a .smpl file
+        
+        Args:
+            filename: The path to the file to write to
+        """
         self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
         with open(filename, "wb") as outfile:
-            np.savez_compressed(outfile, **data)  # type: ignore
+            np.savez_compressed(outfile, **data)
+    
+    def write_to_buffer(self, buffer):
+        """Write the SMPL data to a buffer (e.g., BytesIO)
+        
+        Args:
+            buffer: A writable buffer object (e.g., io.BytesIO)
+        """
+        self.validate()
+        data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
+        np.savez_compressed(buffer, **data)
 
     def validate(self):
         try:
