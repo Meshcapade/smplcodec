@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
 
@@ -19,7 +20,7 @@ class CameraIntrinsics:
         principal_point: Optional[Tuple[float, float]] = None,
         yfov_deg: float = 60.0,
         aspect_ratio: float = 16.0 / 9.0,
-        znear: float = 0.01
+        znear: float = 0.01,
     ):
         """
         Initialize camera intrinsics.
@@ -60,11 +61,7 @@ class CameraIntrinsics:
 class CameraPose:
     """Represents camera pose (extrinsics)."""
 
-    def __init__(
-        self,
-        rotation_matrix: NDArray[np.float32],
-        translation: NDArray[np.float32]
-    ):
+    def __init__(self, rotation_matrix: NDArray[np.float32], translation: NDArray[np.float32]):
         """
         Initialize camera pose.
 
@@ -88,11 +85,14 @@ class CameraPose:
     def to_gltf_pose(self) -> Tuple[List[float], List[float]]:
         """Convert to GLTF translation and rotation (quaternion)."""
         # Convert from CV to GLTF convention
-        cv_to_gltf = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, -1.0, 0.0],  # Flip Y (down to up)
-            [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
-        ], dtype=np.float32)
+        cv_to_gltf = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0],  # Flip Y (down to up)
+                [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
+            ],
+            dtype=np.float32,
+        )
 
         # Camera position in world coords: C = -R^T * t
         cam_pos = -self.rotation_matrix.T @ self.translation
@@ -103,41 +103,39 @@ class CameraPose:
 
         return (
             [float(cam_pos[0]), float(cam_pos[1]), float(cam_pos[2])],
-            [float(quat_xyzw[0]), float(quat_xyzw[1]), float(quat_xyzw[2]), float(quat_xyzw[3])]
+            [float(quat_xyzw[0]), float(quat_xyzw[1]), float(quat_xyzw[2]), float(quat_xyzw[3])],
         )
+
 
 class MCSExporter:
     """Main class for exporting MCS (Meshcapade Scene) files."""
 
     def __init__(self):
         """Initialize the MCS exporter."""
-        self._cv_to_gltf_matrix = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, -1.0, 0.0],  # Flip Y (down to up)
-            [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
-        ], dtype=np.float32)
+        self._cv_to_gltf_matrix = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, -1.0, 0.0],  # Flip Y (down to up)
+                [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
+            ],
+            dtype=np.float32,
+        )
 
     def _create_base_gltf(self, num_frames: int) -> Dict[str, Any]:
         """Create the base GLTF structure."""
         return {
             "asset": {"version": "2.0", "generator": "SMPLCodec MCS Exporter"},
             "scene": 0,
-            "scenes": [{
-                "nodes": [0],
-                "extensions": {
-                    "MC_scene_description": {
-                        "num_frames": num_frames,
-                        "smpl_bodies": []
-                    }
-                }
-            }],
+            "scenes": [
+                {"nodes": [0], "extensions": {"MC_scene_description": {"num_frames": num_frames, "smpl_bodies": []}}}
+            ],
             "nodes": [
                 {"name": "RootNode", "children": [1]},
                 {
                     "name": "AnimatedCamera",
                     "camera": 0,
                     "translation": [0.0, 0.0, 0.0],
-                    "rotation": [0.0, 0.0, 0.0, 1.0]
+                    "rotation": [0.0, 0.0, 0.0, 1.0],
                 },
             ],
             "cameras": [{"type": "perspective", "perspective": {}}],
@@ -155,37 +153,31 @@ class MCSExporter:
             body_data = self._get_smpl_binary_data(body)
 
             # Add buffer
-            gltf["buffers"].append({
-                "byteLength": len(body_data),
-                "uri": f"data:application/octet-stream;base64,{base64.b64encode(body_data).decode('utf-8')}"
-            })
+            gltf["buffers"].append(
+                {
+                    "byteLength": len(body_data),
+                    "uri": f"data:application/octet-stream;base64,{base64.b64encode(body_data).decode('utf-8')}",
+                }
+            )
 
             # Add buffer view
-            gltf["bufferViews"].append({
-                "buffer": i,
-                "byteOffset": 0,
-                "byteLength": len(body_data)
-            })
+            gltf["bufferViews"].append({"buffer": i, "byteOffset": 0, "byteLength": len(body_data)})
 
             # Add to scene description
-            gltf["scenes"][0]["extensions"]["MC_scene_description"]["smpl_bodies"].append({
-                "frame_presence": frame_presence,
-                "bufferView": i
-            })
+            gltf["scenes"][0]["extensions"]["MC_scene_description"]["smpl_bodies"].append(
+                {"frame_presence": frame_presence, "bufferView": i}
+            )
 
     def _get_smpl_binary_data(self, smpl_codec: SMPLCodec) -> bytes:
         """Get binary data from SMPLCodec object by writing to a temporary buffer."""
         import io
+
         buffer = io.BytesIO()
         smpl_codec.write_to_buffer(buffer)
         return buffer.getvalue()
 
     def _add_camera_animation(
-        self,
-        gltf: Dict[str, Any],
-        poses: List[CameraPose],
-        num_frames: int,
-        frame_rate: float
+        self, gltf: Dict[str, Any], poses: List[CameraPose], num_frames: int, frame_rate: float
     ) -> None:
         """Add camera animation to the GLTF structure."""
         times = np.arange(num_frames, dtype=np.float32) * (1.0 / frame_rate)
@@ -203,89 +195,92 @@ class MCSExporter:
 
         # Add buffers
         buffers_start_idx = len(gltf["buffers"])
-        gltf["buffers"].extend([
-            {
-                "byteLength": times.nbytes,
-                "uri": f"data:application/octet-stream;base64,{base64.b64encode(times.tobytes()).decode('utf-8')}"
-            },
-            {
-                "byteLength": camera_positions.nbytes,
-                "uri": f"data:application/octet-stream;base64,{base64.b64encode(camera_positions.tobytes()).decode('utf-8')}"
-            },
-            {
-                "byteLength": rotations.nbytes,
-                "uri": f"data:application/octet-stream;base64,{base64.b64encode(rotations.tobytes()).decode('utf-8')}"
-            }
-        ])
-
-        # Add buffer views
-        gltf["bufferViews"].extend([
-            {
-                "name": "TimeBufferView",
-                "buffer": buffers_start_idx,
-                "byteOffset": 0,
-                "byteLength": times.nbytes
-            },
-            {
-                "name": "camera_track_translations_buffer_view",
-                "buffer": buffers_start_idx + 1,
-                "byteOffset": 0,
-                "byteLength": camera_positions.nbytes
-            },
-            {
-                "name": "camera_track_rotations_buffer_view",
-                "buffer": buffers_start_idx + 2,
-                "byteOffset": 0,
-                "byteLength": rotations.nbytes
-            }
-        ])
-
-        # Add accessors
-        gltf["accessors"].extend([
-            {
-                "name": "TimeAccessor",
-                "bufferView": len(gltf["bufferViews"]) - 3,
-                "componentType": 5126,
-                "count": num_frames,
-                "type": "SCALAR",
-                "min": [float(times.min())],
-                "max": [float(times.max())]
-            },
-            {
-                "name": "camera_track_translations_accessor",
-                "bufferView": len(gltf["bufferViews"]) - 2,
-                "componentType": 5126,
-                "count": num_frames,
-                "type": "VEC3"
-            },
-            {
-                "name": "camera_track_rotations_accessor",
-                "bufferView": len(gltf["bufferViews"]) - 1,
-                "componentType": 5126,
-                "count": num_frames,
-                "type": "VEC4"
-            }
-        ])
-
-        # Add animation
-        gltf["animations"].append({
-            "channels": [
-                {"sampler": 0, "target": {"node": 1, "path": "translation"}},
-                {"sampler": 1, "target": {"node": 1, "path": "rotation"}}
-            ],
-            "samplers": [
+        gltf["buffers"].extend(
+            [
                 {
-                    "input": len(gltf["accessors"]) - 3,
-                    "interpolation": "LINEAR",
-                    "output": len(gltf["accessors"]) - 2
+                    "byteLength": times.nbytes,
+                    "uri": f"data:application/octet-stream;base64,{base64.b64encode(times.tobytes()).decode('utf-8')}",
                 },
                 {
-                    "input": len(gltf["accessors"]) - 3,
-                    "interpolation": "LINEAR",
-                    "output": len(gltf["accessors"]) - 1
-                }
+                    "byteLength": camera_positions.nbytes,
+                    "uri": f"data:application/octet-stream;base64,{base64.b64encode(camera_positions.tobytes()).decode('utf-8')}",
+                },
+                {
+                    "byteLength": rotations.nbytes,
+                    "uri": f"data:application/octet-stream;base64,{base64.b64encode(rotations.tobytes()).decode('utf-8')}",
+                },
             ]
-        })
+        )
+
+        # Add buffer views
+        gltf["bufferViews"].extend(
+            [
+                {"name": "TimeBufferView", "buffer": buffers_start_idx, "byteOffset": 0, "byteLength": times.nbytes},
+                {
+                    "name": "camera_track_translations_buffer_view",
+                    "buffer": buffers_start_idx + 1,
+                    "byteOffset": 0,
+                    "byteLength": camera_positions.nbytes,
+                },
+                {
+                    "name": "camera_track_rotations_buffer_view",
+                    "buffer": buffers_start_idx + 2,
+                    "byteOffset": 0,
+                    "byteLength": rotations.nbytes,
+                },
+            ]
+        )
+
+        # Add accessors
+        gltf["accessors"].extend(
+            [
+                {
+                    "name": "TimeAccessor",
+                    "bufferView": len(gltf["bufferViews"]) - 3,
+                    "componentType": 5126,
+                    "count": num_frames,
+                    "type": "SCALAR",
+                    "min": [float(times.min())],
+                    "max": [float(times.max())],
+                },
+                {
+                    "name": "camera_track_translations_accessor",
+                    "bufferView": len(gltf["bufferViews"]) - 2,
+                    "componentType": 5126,
+                    "count": num_frames,
+                    "type": "VEC3",
+                },
+                {
+                    "name": "camera_track_rotations_accessor",
+                    "bufferView": len(gltf["bufferViews"]) - 1,
+                    "componentType": 5126,
+                    "count": num_frames,
+                    "type": "VEC4",
+                },
+            ]
+        )
+
+        # Add animation
+        gltf["animations"].append(
+            {
+                "channels": [
+                    {"sampler": 0, "target": {"node": 1, "path": "translation"}},
+                    {"sampler": 1, "target": {"node": 1, "path": "rotation"}},
+                ],
+                "samplers": [
+                    {
+                        "input": len(gltf["accessors"]) - 3,
+                        "interpolation": "LINEAR",
+                        "output": len(gltf["accessors"]) - 2,
+                    },
+                    {
+                        "input": len(gltf["accessors"]) - 3,
+                        "interpolation": "LINEAR",
+                        "output": len(gltf["accessors"]) - 1,
+                    },
+                ],
+            }
+        )
 
     def _write_gltf(self, gltf: Dict[str, Any], output_path: Union[str, Path]) -> None:
         """Write GLTF data to file."""
@@ -302,7 +297,7 @@ class SceneExporter(MCSExporter):
         smpl_bodies: Union[List[SMPLCodec], List[bytes]],
         output_path: Union[str, Path],
         camera_intrinsics: Optional[CameraIntrinsics] = None,
-        camera_pose: Optional[CameraPose] = None
+        camera_pose: Optional[CameraPose] = None,
     ) -> None:
         """
         Export a single-frame scene.
@@ -357,7 +352,7 @@ class SceneExporter(MCSExporter):
         num_frames: int,
         frame_rate: float,
         camera_intrinsics: CameraIntrinsics,
-        camera_poses: List[CameraPose]
+        camera_poses: List[CameraPose],
     ) -> None:
         """
         Export an animated scene with camera animation.
@@ -401,7 +396,7 @@ class SceneExporter(MCSExporter):
         frame_rate: float,
         camera_intrinsics: CameraIntrinsics,
         camera_pose: CameraPose,
-        static_frame_index: int = 0
+        static_frame_index: int = 0,
     ) -> None:
         """
         Export a scene with a static camera pose.
@@ -441,12 +436,85 @@ class SceneExporter(MCSExporter):
         print(f"Static camera scene exported to {output_path}")
 
 
+class MCSBodyExtractor:
+    """Extracting .SMPL (Meshcapade SMPL Body) files from MCS files"""
+
+    mcs_data: Dict[str, Any]
+    smpl_codecs: List[SMPLCodec] = []
+
+    def __init__(self):
+        self.clear_bodies_buffer()
+
+    def parse_mcs_file(self, mcs_path: str):
+        """
+        Parse the MCS file and return the GLTF structure.
+        """
+        with open(mcs_path, "r", encoding="utf-8") as f:
+            self.mcs_data = json.load(f)
+
+    def clear_bodies_buffer(self):
+        """Clear the SMPL codecs"""
+        self.smpl_codecs = []
+
+    def extract_smpl_buffers(self, gltf_data: Dict[str, Any]) -> List[SMPLCodec]:
+        """
+        Extract SMPL buffer data from the GLTF structure and return as SMPLCodec objects.
+
+        Returns:
+            List of SMPLCodec objects extracted from the MCS file
+        """
+        import io
+
+        scene_ext = gltf_data["scenes"][0]["extensions"]["MC_scene_description"]
+        smpl_bodies = scene_ext["smpl_bodies"]
+
+        print(f"Found {len(smpl_bodies)} SMPL bodies in the MCS file")
+
+        for i, smpl_body in enumerate(smpl_bodies):
+            buffer_view_idx = smpl_body["bufferView"]
+            buffer_view = gltf_data["bufferViews"][buffer_view_idx]
+            buffer_idx = buffer_view["buffer"]
+            buffer_data = gltf_data["buffers"][buffer_idx]
+
+            uri = buffer_data["uri"]
+            if uri.startswith("data:application/octet-stream;base64,"):
+                base64_data = uri.split(",", 1)[1]
+                smpl_buffer = base64.b64decode(base64_data)
+
+                # Convert bytes to SMPLCodec object
+                buffer_io = io.BytesIO(smpl_buffer)
+                smpl_codec = SMPLCodec.from_file(buffer_io)  # type: ignore[arg-type]
+                self.smpl_codecs.append(smpl_codec)
+
+                print(f"Extracted SMPL body {i}: {len(smpl_buffer)} bytes")
+            else:
+                raise ValueError(f"Unexpected URI format in buffer {buffer_idx}: {uri}")
+
+        return self.smpl_codecs
+
+    def save_smpl_files(self, output_dir: str = ".") -> None:
+        """
+        Save SMPL codecs as individual .smpl files.
+
+        Args:
+            output_dir: Directory to save the .smpl files
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        for i, smpl_codec in enumerate(self.smpl_codecs):
+            filename = f"smpl_body_{i}.smpl"
+            filepath = os.path.join(output_dir, filename)
+
+            smpl_codec.write(filepath)
+            print(f"Saved {filename}")
+
+
 # Convenience functions for backward compatibility and easy usage
 def export_single_frame_scene(
     smpl_buffers: Union[List[bytes], List[SMPLCodec]],
     output_path: Union[str, Path],
     camera_intrinsics: Optional[CameraIntrinsics] = None,
-    camera_pose: Optional[CameraPose] = None
+    camera_pose: Optional[CameraPose] = None,
 ) -> None:
     """
     Export a single-frame scene (convenience function).
@@ -459,6 +527,7 @@ def export_single_frame_scene(
     """
     exporter = SceneExporter()
     exporter.export_single_frame(smpl_buffers, output_path, camera_intrinsics, camera_pose)
+
 
 if __name__ == "__main__":
     # Example usage with new class-based interface
@@ -475,8 +544,7 @@ if __name__ == "__main__":
         # Export with custom camera
         camera_intrinsics = CameraIntrinsics(focal_length=1000.0, principal_point=(640.0, 480.0))
         camera_pose = CameraPose(
-            rotation_matrix=np.eye(3, dtype=np.float32),
-            translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
+            rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
         )
 
         exporter.export_single_frame([body], "example_custom_camera.mcs", camera_intrinsics, camera_pose)
