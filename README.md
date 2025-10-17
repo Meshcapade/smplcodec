@@ -58,6 +58,30 @@ camera_pose = CameraPose(
 exporter.export_single_frame([body], "scene.mcs", camera_intrinsics, camera_pose)
 ```
 
+## Extracting SMPL Bodies from MCS Files
+
+You can extract SMPL bodies from MCS files and use them in the [Meshcapade Editor](https://me.meshcapade.com/editor):
+
+```python
+from smplcodec.mcs import MCSBodyExtractor
+
+# Create extractor and parse MCS file
+extractor = MCSBodyExtractor()
+extractor.parse_mcs_file("scene.mcs")
+
+# Extract all SMPL bodies
+bodies = extractor.extract_smpl_buffers(extractor.mcs_data)
+print(f"Found {len(bodies)} SMPL bodies")
+
+# Save as individual .smpl files
+extractor.save_smpl_files("extracted_bodies")
+# Creates: extracted_bodies/smpl_body_0.smpl, smpl_body_1.smpl, etc.
+```
+
+The extracted `.smpl` files can be drag-and-dropped directly into the [Meshcapade Editor](https://me.meshcapade.com/editor) to visualize and edit the bodies.
+
+https://github.com/Meshcapade/smplcodec/assets/drag_smpl_to_editor.mp4
+
 For detailed documentation, see [MCS_INTERFACE_GUIDE.md](MCS_INTERFACE_GUIDE.md).
 
 ## License
