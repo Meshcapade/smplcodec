@@ -436,77 +436,52 @@ class SceneExporter(MCSExporter):
         print(f"Static camera scene exported to {output_path}")
 
 
-class MCSBodyExtractor:
-    """Extracting .SMPL (Meshcapade SMPL Body) files from MCS files"""
+def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
+    """
+    Extract SMPL body parameters from an MCS file.
 
-    mcs_data: Dict[str, Any]
-    smpl_codecs: List[SMPLCodec] = []
+    Args:
+        mcs_file_path: Path to the .mcs file
 
-    def __init__(self):
-        self.clear_bodies_buffer()
+    Returns:
+        List of SMPLCodec objects, one per body in the scene
+    """
+    import io
+    import json
+    import base64
 
-    def parse_mcs_file(self, mcs_path: str):
-        """
-        Parse the MCS file and return the GLTF structure.
-        """
-        with open(mcs_path, "r", encoding="utf-8") as f:
-            self.mcs_data = json.load(f)
+    # Load the GLTF data from the MCS file
+    with open(mcs_file_path, "r", encoding="utf-8") as f:
+        gltf_data = json.load(f)
 
-    def clear_bodies_buffer(self):
-        """Clear the SMPL codecs"""
-        self.smpl_codecs = []
+    # Extract SMPL bodies from the GLTF structure
+    scene_ext = gltf_data["scenes"][0]["extensions"]["MC_scene_description"]
+    smpl_bodies = scene_ext["smpl_bodies"]
 
-    def extract_smpl_buffers(self, gltf_data: Dict[str, Any]) -> List[SMPLCodec]:
-        """
-        Extract SMPL buffer data from the GLTF structure and return as SMPLCodec objects.
+    print(f"Found {len(smpl_bodies)} SMPL bodies in the MCS file")
 
-        Returns:
-            List of SMPLCodec objects extracted from the MCS file
-        """
-        import io
+    extracted_bodies = []
+    for i, smpl_body in enumerate(smpl_bodies):
+        buffer_view_idx = smpl_body["bufferView"]
+        buffer_view = gltf_data["bufferViews"][buffer_view_idx]
+        buffer_idx = buffer_view["buffer"]
+        buffer_data = gltf_data["buffers"][buffer_idx]
 
-        scene_ext = gltf_data["scenes"][0]["extensions"]["MC_scene_description"]
-        smpl_bodies = scene_ext["smpl_bodies"]
+        uri = buffer_data["uri"]
+        if uri.startswith("data:application/octet-stream;base64,"):
+            base64_data = uri.split(",", 1)[1]
+            smpl_buffer = base64.b64decode(base64_data)
 
-        print(f"Found {len(smpl_bodies)} SMPL bodies in the MCS file")
+            # Convert bytes to SMPLCodec object
+            buffer_io = io.BytesIO(smpl_buffer)
+            smpl_codec = SMPLCodec.from_file(buffer_io)  # type: ignore[arg-type]
+            extracted_bodies.append(smpl_codec)
 
-        for i, smpl_body in enumerate(smpl_bodies):
-            buffer_view_idx = smpl_body["bufferView"]
-            buffer_view = gltf_data["bufferViews"][buffer_view_idx]
-            buffer_idx = buffer_view["buffer"]
-            buffer_data = gltf_data["buffers"][buffer_idx]
+            print(f"Extracted SMPL body {i}: {len(smpl_buffer)} bytes")
+        else:
+            raise ValueError(f"Unexpected URI format in buffer {buffer_idx}: {uri}")
 
-            uri = buffer_data["uri"]
-            if uri.startswith("data:application/octet-stream;base64,"):
-                base64_data = uri.split(",", 1)[1]
-                smpl_buffer = base64.b64decode(base64_data)
-
-                # Convert bytes to SMPLCodec object
-                buffer_io = io.BytesIO(smpl_buffer)
-                smpl_codec = SMPLCodec.from_file(buffer_io)  # type: ignore[arg-type]
-                self.smpl_codecs.append(smpl_codec)
-
-                print(f"Extracted SMPL body {i}: {len(smpl_buffer)} bytes")
-            else:
-                raise ValueError(f"Unexpected URI format in buffer {buffer_idx}: {uri}")
-
-        return self.smpl_codecs
-
-    def save_smpl_files(self, output_dir: str = ".") -> None:
-        """
-        Save SMPL codecs as individual .smpl files.
-
-        Args:
-            output_dir: Directory to save the .smpl files
-        """
-        os.makedirs(output_dir, exist_ok=True)
-
-        for i, smpl_codec in enumerate(self.smpl_codecs):
-            filename = f"smpl_body_{i}.smpl"
-            filepath = os.path.join(output_dir, filename)
-
-            smpl_codec.write(filepath)
-            print(f"Saved {filename}")
+    return extracted_bodies
 
 
 # Convenience functions for backward compatibility and easy usage

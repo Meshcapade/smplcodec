@@ -11,7 +11,7 @@ The interface is built around several key classes that represent different aspec
 - **`SMPLCodec`**: SMPL body data
 - **`SceneExporter`**: Main exporter class with high-level methods
 - **`MCSExporter`**: Base exporter class with low-level functionality
-- **`MCSBodyExtractor`**: Extractor class for reading SMPL bodies from MCS files
+- **`extract_smpl_from_mcs()`**: Function for extracting SMPL bodies from MCS files
 
 ## Quick Start
 
@@ -34,19 +34,14 @@ exporter.export_single_frame([body], "scene.mcs")
 ### Basic SMPL Body Extraction
 
 ```python
-from smplcodec.mcs import MCSBodyExtractor
+from smplcodec.mcs import extract_smpl_from_mcs
 
-# Create extractor
-extractor = MCSBodyExtractor()
-
-# Parse MCS file
-extractor.parse_mcs_file("scene.mcs")
-
-# Extract SMPL bodies
-bodies = extractor.extract_smpl_buffers(extractor.mcs_data)
+# Extract SMPL bodies from MCS file
+bodies = extract_smpl_from_mcs("scene.mcs")
 
 # Save as .smpl files
-extractor.save_smpl_files("output_directory")
+for i, body in enumerate(bodies):
+    body.write(f"output_directory/smpl_body_{i}.smpl")
 ```
 
 ### Custom Camera Setup
@@ -255,83 +250,30 @@ def export_static_camera_scene(
 - `camera_pose`: Static camera pose
 - `static_frame_index`: Frame index to use for camera pose
 
-### MCSBodyExtractor
+### extract_smpl_from_mcs()
 
-Class for extracting SMPL body data from MCS files.
-
-```python
-class MCSBodyExtractor:
-    mcs_data: Dict[str, Any]
-    smpl_codecs: List[SMPLCodec]
-```
-
-#### Methods
-
-##### `parse_mcs_file()`
-
-Parse an MCS file and load its GLTF structure.
+Function for extracting SMPL body data from MCS files.
 
 ```python
-def parse_mcs_file(self, mcs_path: str) -> None:
+def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
 ```
 
 **Parameters:**
-- `mcs_path`: Path to the MCS file to parse
-
-**Usage:**
-```python
-extractor = MCSBodyExtractor()
-extractor.parse_mcs_file("scene.mcs")
-```
-
-##### `extract_smpl_buffers()`
-
-Extract SMPL body data from the parsed GLTF structure.
-
-```python
-def extract_smpl_buffers(self, gltf_data: Dict[str, Any]) -> List[SMPLCodec]:
-```
-
-**Parameters:**
-- `gltf_data`: GLTF data structure (typically `self.mcs_data`)
+- `mcs_file_path`: Path to the `.mcs` file
 
 **Returns:**
-- List of `SMPLCodec` objects extracted from the MCS file
+- List of `SMPLCodec` objects, one per body in the scene
 
 **Usage:**
 ```python
-# After parsing an MCS file
-smpl_codecs = extractor.extract_smpl_buffers(extractor.mcs_data)
-```
+from smplcodec.mcs import extract_smpl_from_mcs
 
-##### `save_smpl_files()`
+# Extract SMPL bodies
+bodies = extract_smpl_from_mcs("scene.mcs")
 
-Save extracted SMPL codecs as individual `.smpl` files.
-
-```python
-def save_smpl_files(self, output_dir: str = ".") -> None:
-```
-
-**Parameters:**
-- `output_dir`: Directory to save the `.smpl` files (default: current directory)
-
-**Usage:**
-```python
-# Save all extracted bodies
-extractor.save_smpl_files("extracted_bodies")
-```
-
-##### `clear_bodies_buffer()`
-
-Clear the internal SMPL codecs buffer.
-
-```python
-def clear_bodies_buffer(self) -> None:
-```
-
-**Usage:**
-```python
-extractor.clear_bodies_buffer()
+# Save them individually
+for i, body in enumerate(bodies):
+    body.write(f"body_{i}.smpl")
 ```
 
 ## Backward Compatibility
@@ -414,21 +356,15 @@ exporter.export_single_frame(
 ### Example 4: Extracting SMPL Bodies from MCS Files
 
 ```python
-from smplcodec.mcs import MCSBodyExtractor
-
-# Create extractor
-extractor = MCSBodyExtractor()
-
-# Parse MCS file
-extractor.parse_mcs_file("scene.mcs")
+from smplcodec.mcs import extract_smpl_from_mcs
 
 # Extract SMPL bodies as SMPLCodec objects
-smpl_codecs = extractor.extract_smpl_buffers(extractor.mcs_data)
+bodies = extract_smpl_from_mcs("scene.mcs")
 
-print(f"Extracted {len(smpl_codecs)} SMPL bodies")
+print(f"Extracted {len(bodies)} SMPL bodies")
 
 # Access individual body data
-for i, body in enumerate(smpl_codecs):
+for i, body in enumerate(bodies):
     print(f"Body {i}:")
     print(f"  Frame count: {body.frame_count}")
     print(f"  Frame rate: {body.frame_rate}")
@@ -460,7 +396,7 @@ for i, body in enumerate(smpl_codecs):
 ### Example 6: Round-Trip Conversion
 
 ```python
-from smplcodec.mcs import SceneExporter, MCSBodyExtractor
+from smplcodec.mcs import SceneExporter, extract_smpl_from_mcs
 from smplcodec.codec import SMPLCodec
 import numpy as np
 
@@ -472,9 +408,7 @@ exporter = SceneExporter()
 exporter.export_single_frame([original_body], "temp.mcs")
 
 # Extract back from MCS
-extractor = MCSBodyExtractor()
-extractor.parse_mcs_file("temp.mcs")
-extracted_bodies = extractor.extract_smpl_buffers(extractor.mcs_data)
+extracted_bodies = extract_smpl_from_mcs("temp.mcs")
 
 # Verify data integrity
 extracted_body = extracted_bodies[0]

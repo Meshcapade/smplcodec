@@ -313,8 +313,8 @@ def test_static_camera_scene_mismatched_frame_presences(tmp_path: Path):
 
 # -------- Smpl buffer extraction --------
 def test_extract_single_smpl_buffer(tmp_path: Path):
-    """Test that extract_smpl_buffers returns SMPLCodec objects from a scene with only one body"""
-    from smplcodec.mcs import MCSBodyExtractor
+    """Test that extract_smpl_from_mcs returns SMPLCodec objects from a scene with only one body"""
+    from smplcodec.mcs import extract_smpl_from_mcs
 
     # Create a test MCS file with a single body
     out = tmp_path / "single_body_extract.mcs"
@@ -323,13 +323,8 @@ def test_extract_single_smpl_buffer(tmp_path: Path):
     exporter = SceneExporter()
     exporter.export_single_frame(smpl_bodies=smpl_codecs, output_path=str(out))
 
-    # Now extract the SMPL bodies
-    extractor = MCSBodyExtractor()
-    extractor.parse_mcs_file(str(out))
-
-    # Extract SMPL codecs
-    extracted_codecs = extractor.extract_smpl_buffers(extractor.mcs_data)
-
+    # Extract SMPL bodies
+    extracted_codecs = extract_smpl_from_mcs(str(out))
     # Verify we got exactly one SMPLCodec object
     assert len(extracted_codecs) == 1
     assert isinstance(extracted_codecs[0], SMPLCodec)
@@ -353,7 +348,9 @@ def test_extract_single_smpl_buffer(tmp_path: Path):
 
     # Test saving the extracted codecs
     output_dir = tmp_path / "extracted_smpl"
-    extractor.save_smpl_files(str(output_dir))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for i, body in enumerate(extracted_codecs):
+        body.write(str(output_dir / f"smpl_body_{i}.smpl"))
 
     # Verify the file was created
     saved_file = output_dir / "smpl_body_0.smpl"
