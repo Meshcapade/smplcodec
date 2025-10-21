@@ -109,7 +109,7 @@ class MCSExporter:
 
     def __init__(self):
         """Initialize the MCS exporter."""
-        self._cv_to_gltf_matrix = cv_to_gltf_axis_correction
+        pass
 
     def _create_base_gltf(self, num_frames: int) -> Dict[str, Any]:
         """Create the base GLTF structure."""
@@ -142,7 +142,7 @@ class MCSExporter:
             # Get binary data from SMPLCodec
             body_data = self._get_smpl_binary_data(body)
 
-            # Add buffer
+            # Add elf.uffer
             gltf["buffers"].append(
                 {
                     "byteLength": len(body_data),
