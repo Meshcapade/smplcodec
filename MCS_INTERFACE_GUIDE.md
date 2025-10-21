@@ -11,6 +11,7 @@ The interface is built around several key classes that represent different aspec
 - **`SMPLCodec`**: SMPL body data
 - **`SceneExporter`**: Main exporter class with high-level methods
 - **`MCSExporter`**: Base exporter class with low-level functionality
+- **`extract_smpl_from_mcs()`**: Function for extracting SMPL bodies from MCS files
 
 ## Quick Start
 
@@ -28,6 +29,19 @@ body = SMPLCodec.from_file("avatar.smpl")
 
 # Export with default camera (60° FOV, 16:9 aspect ratio)
 exporter.export_single_frame([body], "scene.mcs")
+```
+
+### Basic SMPL Body Extraction
+
+```python
+from smplcodec.mcs import extract_smpl_from_mcs
+
+# Extract SMPL bodies from MCS file
+bodies = extract_smpl_from_mcs("scene.mcs")
+
+# Save as .smpl files
+for i, body in enumerate(bodies):
+    body.write(f"output_directory/smpl_body_{i}.smpl")
 ```
 
 ### Custom Camera Setup
@@ -50,7 +64,7 @@ camera_pose = CameraPose(
 
 # Export with custom camera
 exporter.export_single_frame(
-    [body], 
+    [body],
     "custom_camera.mcs",
     camera_intrinsics=camera_intrinsics,
     camera_pose=camera_pose
@@ -236,6 +250,32 @@ def export_static_camera_scene(
 - `camera_pose`: Static camera pose
 - `static_frame_index`: Frame index to use for camera pose
 
+### extract_smpl_from_mcs()
+
+Function for extracting SMPL body data from MCS files.
+
+```python
+def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
+```
+
+**Parameters:**
+- `mcs_file_path`: Path to the `.mcs` file
+
+**Returns:**
+- List of `SMPLCodec` objects, one per body in the scene
+
+**Usage:**
+```python
+from smplcodec.mcs import extract_smpl_from_mcs
+
+# Extract SMPL bodies
+bodies = extract_smpl_from_mcs("scene.mcs")
+
+# Save them individually
+for i, body in enumerate(bodies):
+    body.write(f"body_{i}.smpl")
+```
+
 ## Backward Compatibility
 
 The original function-based interface is still available for backward compatibility:
@@ -311,6 +351,99 @@ exporter.export_single_frame(
     camera_intrinsics=camera_intrinsics,
     camera_pose=camera_pose
 )
+```
+
+### Example 4: Extracting SMPL Bodies from MCS Files
+
+```python
+from smplcodec.mcs import extract_smpl_from_mcs
+
+# Extract SMPL bodies as SMPLCodec objects
+bodies = extract_smpl_from_mcs("scene.mcs")
+
+print(f"Extracted {len(bodies)} SMPL bodies")
+
+# Access individual body data
+for i, body in enumerate(bodies):
+    print(f"Body {i}:")
+    print(f"  Frame count: {body.frame_count}")
+    print(f"  Frame rate: {body.frame_rate}")
+    print(f"  SMPL version: {body.smpl_version}")
+    print(f"  Gender: {body.gender}")
+```
+
+### Example 5: Extract and Save SMPL Files
+
+```python
+from smplcodec.mcs import MCSBodyExtractor
+
+# Create extractor and parse MCS file
+extractor = MCSBodyExtractor()
+extractor.parse_mcs_file("multi_body_scene.mcs")
+
+# Extract bodies
+smpl_codecs = extractor.extract_smpl_buffers(extractor.mcs_data)
+
+# Save all bodies to a directory
+extractor.save_smpl_files("extracted_smpl_bodies")
+# This creates: smpl_body_0.smpl, smpl_body_1.smpl, etc.
+
+# Or save individual bodies with custom names
+for i, body in enumerate(smpl_codecs):
+    body.write(f"custom_body_{i}.smpl")
+```
+
+### Example 6: Round-Trip Conversion
+
+```python
+from smplcodec.mcs import SceneExporter, extract_smpl_from_mcs
+from smplcodec.codec import SMPLCodec
+import numpy as np
+
+# Original SMPL data
+original_body = SMPLCodec.from_file("avatar.smpl")
+
+# Export to MCS
+exporter = SceneExporter()
+exporter.export_single_frame([original_body], "temp.mcs")
+
+# Extract back from MCS
+extracted_bodies = extract_smpl_from_mcs("temp.mcs")
+
+# Verify data integrity
+extracted_body = extracted_bodies[0]
+assert extracted_body.frame_count == original_body.frame_count
+assert extracted_body.frame_rate == original_body.frame_rate
+assert np.allclose(extracted_body.body_translation, original_body.body_translation)
+assert np.allclose(extracted_body.body_pose, original_body.body_pose)
+
+print("Round-trip conversion successful!")
+```
+
+### Example 7: Processing Multiple Bodies from MCS
+
+```python
+from smplcodec.mcs import MCSBodyExtractor
+import numpy as np
+
+# Extract bodies from a scene
+extractor = MCSBodyExtractor()
+extractor.parse_mcs_file("crowd_scene.mcs")
+bodies = extractor.extract_smpl_buffers(extractor.mcs_data)
+
+# Process each body
+for i, body in enumerate(bodies):
+    # Modify body data (e.g., adjust positions)
+    if body.body_translation is not None:
+        body.body_translation += np.array([[0.0, 0.0, 1.0]])
+
+    # Save modified body
+    body.write(f"modified_body_{i}.smpl")
+
+# Or create a new MCS with modified bodies
+from smplcodec.mcs import SceneExporter
+exporter = SceneExporter()
+exporter.export_single_frame(bodies, "modified_scene.mcs")
 ```
 
 ## Error Handling

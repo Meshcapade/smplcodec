@@ -9,7 +9,6 @@ from typing import Optional
 from .utils import extract_item, coerce_type, matching, to_camel, to_snake, PathType
 from .version import MAJOR
 
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -199,24 +198,24 @@ class SMPLCodec:
 
     def write(self, filename):
         """Write the SMPL data to a .smpl file
-        
+
         Args:
             filename: The path to the file to write to
         """
         self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
         with open(filename, "wb") as outfile:
-            np.savez_compressed(outfile, **data)
-    
+            np.savez_compressed(outfile, **data)  # type: ignore[arg-type]
+
     def write_to_buffer(self, buffer):
         """Write the SMPL data to a buffer (e.g., BytesIO)
-        
+
         Args:
             buffer: A writable buffer object (e.g., io.BytesIO)
         """
         self.validate()
         data = {to_camel(f): coerce_type(v) for f, v in asdict(self).items() if v is not None}
-        np.savez_compressed(buffer, **data)
+        np.savez_compressed(buffer, **data)  # type: ignore[arg-type]
 
     def validate(self):
         try:

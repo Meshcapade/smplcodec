@@ -22,8 +22,8 @@ A `.smpl` files is simply an NPZ that follows some conventions. It is flat-struc
     a = SMPLCodec.from_file("avatar.smpl")
 
     # The full_pose helper property contains the sequence data
-    assert a.full_pose.shape == (601, 55, 3)            
-    
+    assert a.full_pose.shape == (601, 55, 3)
+
     # You can also load AMASS sequences
     a = SMPLCodec.from_amass_npz("motion.npz")
 
@@ -57,6 +57,26 @@ camera_pose = CameraPose(
 # Export scene
 exporter.export_single_frame([body], "scene.mcs", camera_intrinsics, camera_pose)
 ```
+
+## Extracting SMPL Bodies from MCS Files
+
+You can extract SMPL bodies from MCS files and use them in the [Meshcapade Editor](https://me.meshcapade.com/editor):
+
+```python
+from smplcodec.mcs import extract_smpl_from_mcs
+
+# Extract all SMPL bodies from MCS file
+bodies = extract_smpl_from_mcs("scene.mcs")
+print(f"Found {len(bodies)} SMPL bodies")
+
+# Save as individual .smpl files
+for i, body in enumerate(bodies):
+    body.write(f"extracted_bodies/smpl_body_{i}.smpl")
+```
+
+The extracted `.smpl` files can be drag-and-dropped directly into the [Meshcapade Editor](https://me.meshcapade.com/editor) to visualize and edit the bodies.
+
+https://github.com/Meshcapade/smplcodec/assets/drag_smpl_to_editor.mp4
 
 For detailed documentation, see [MCS_INTERFACE_GUIDE.md](MCS_INTERFACE_GUIDE.md).
 

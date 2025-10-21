@@ -6,15 +6,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scipy.spatial.transform import Rotation as R_scipy
-
 from smplcodec.mcs import (
     SceneExporter,
     CameraIntrinsics,
     CameraPose,
 )
 from smplcodec.codec import SMPLCodec
-
 
 
 def _read_gltf(path: Path) -> dict:
@@ -31,7 +28,7 @@ def _dummy_smpl_codec(n=1):
             frame_count=1,
             frame_rate=30.0,
             body_translation=np.array([[0.0, 0.0, 0.0]], dtype=np.float32),
-            body_pose=np.zeros((1, 22, 3), dtype=np.float32)
+            body_pose=np.zeros((1, 22, 3), dtype=np.float32),
         )
         codecs.append(codec)
     return codecs
@@ -45,10 +42,7 @@ def test_single_frame_default_camera_intrinsics_and_pose(tmp_path: Path):
     smpl_codecs = _dummy_smpl_codec(2)
 
     exporter = SceneExporter()
-    exporter.export_single_frame(
-        smpl_bodies=smpl_codecs,
-        output_path=str(out)
-    )
+    exporter.export_single_frame(smpl_bodies=smpl_codecs, output_path=str(out))
 
     gltf = _read_gltf(out)
 
@@ -85,22 +79,13 @@ def test_single_frame_with_custom_camera(tmp_path: Path):
     smpl_codecs = _dummy_smpl_codec(1)
 
     # Create custom camera setup
-    camera_intrinsics = CameraIntrinsics(
-        focal_length=800.0,
-        principal_point=(500.0, 400.0)
-    )
+    camera_intrinsics = CameraIntrinsics(focal_length=800.0, principal_point=(500.0, 400.0))
 
-    camera_pose = CameraPose(
-        rotation_matrix=np.eye(3, dtype=np.float32),
-        translation=np.zeros((3,), dtype=np.float32)
-    )
+    camera_pose = CameraPose(rotation_matrix=np.eye(3, dtype=np.float32), translation=np.zeros((3,), dtype=np.float32))
 
     exporter = SceneExporter()
     exporter.export_single_frame(
-        smpl_bodies=smpl_codecs,
-        output_path=str(out),
-        camera_intrinsics=camera_intrinsics,
-        camera_pose=camera_pose
+        smpl_bodies=smpl_codecs, output_path=str(out), camera_intrinsics=camera_intrinsics, camera_pose=camera_pose
     )
 
     gltf = _read_gltf(out)
@@ -128,10 +113,7 @@ def test_single_frame_custom_camera_intrinsics_validation():
     """Test that CameraIntrinsics validates inputs correctly."""
 
     # Valid inputs
-    intrinsics = CameraIntrinsics(
-        focal_length=1000.0,
-        principal_point=(640.0, 480.0)
-    )
+    intrinsics = CameraIntrinsics(focal_length=1000.0, principal_point=(640.0, 480.0))
     assert intrinsics.focal_length == 1000.0
     assert intrinsics.principal_point == (640.0, 480.0)
 
@@ -148,25 +130,18 @@ def test_camera_pose_validation():
 
     # Valid inputs
     pose = CameraPose(
-        rotation_matrix=np.eye(3, dtype=np.float32),
-        translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
+        rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
     )
     assert pose.rotation_matrix.shape == (3, 3)
     assert pose.translation.shape == (3,)
 
     # Invalid rotation matrix
     with pytest.raises(ValueError, match="rotation_matrix must be 3x3"):
-        CameraPose(
-            rotation_matrix=np.eye(2, dtype=np.float32),
-            translation=np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        )
+        CameraPose(rotation_matrix=np.eye(2, dtype=np.float32), translation=np.array([0.0, 0.0, 0.0], dtype=np.float32))
 
     # Invalid translation
     with pytest.raises(ValueError, match="translation must be 3D vector"):
-        CameraPose(
-            rotation_matrix=np.eye(3, dtype=np.float32),
-            translation=np.array([0.0, 0.0], dtype=np.float32)
-        )
+        CameraPose(rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0], dtype=np.float32))
 
 
 # -------- multi-frame: static camera pose --------
@@ -183,18 +158,14 @@ def test_static_camera_scene_multi_frame(tmp_path: Path):
     camera_poses = []
     for i in range(num_frames):
         pose = CameraPose(
-            rotation_matrix=np.eye(3, dtype=np.float32),
-            translation=np.array([i, 2 * i, -i], dtype=np.float32)
+            rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([i, 2 * i, -i], dtype=np.float32)
         )
         camera_poses.append(pose)
 
     # Use frame 3 for static pose
     static_pose = camera_poses[3]
 
-    camera_intrinsics = CameraIntrinsics(
-        focal_length=800.0,
-        principal_point=(500.0, 500.0)
-    )
+    camera_intrinsics = CameraIntrinsics(focal_length=800.0, principal_point=(500.0, 500.0))
 
     exporter = SceneExporter()
     exporter.export_static_camera_scene(
@@ -205,7 +176,7 @@ def test_static_camera_scene_multi_frame(tmp_path: Path):
         frame_rate=30.0,
         camera_intrinsics=camera_intrinsics,
         camera_pose=static_pose,
-        static_frame_index=0  # Not used in this method
+        static_frame_index=0,  # Not used in this method
     )
 
     gltf = _read_gltf(out)
@@ -237,15 +208,11 @@ def test_animated_camera_scene(tmp_path: Path):
     for i in range(num_frames):
         # Keep rotations identity, translate along Z
         pose = CameraPose(
-            rotation_matrix=np.eye(3, dtype=np.float32),
-            translation=np.array([0.0, 0.0, float(i)], dtype=np.float32)
+            rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0, float(i)], dtype=np.float32)
         )
         camera_poses.append(pose)
 
-    camera_intrinsics = CameraIntrinsics(
-        focal_length=800.0,
-        principal_point=(500.0, 500.0)
-    )
+    camera_intrinsics = CameraIntrinsics(focal_length=800.0, principal_point=(500.0, 500.0))
 
     exporter = SceneExporter()
     exporter.export_animated_scene(
@@ -255,7 +222,7 @@ def test_animated_camera_scene(tmp_path: Path):
         num_frames=num_frames,
         frame_rate=frame_rate,
         camera_intrinsics=camera_intrinsics,
-        camera_poses=camera_poses
+        camera_poses=camera_poses,
     )
 
     gltf = _read_gltf(out)
@@ -296,8 +263,7 @@ def test_animated_scene_mismatched_camera_poses(tmp_path: Path):
     camera_poses = []
     for i in range(3):
         pose = CameraPose(
-            rotation_matrix=np.eye(3, dtype=np.float32),
-            translation=np.array([0.0, 0.0, float(i)], dtype=np.float32)
+            rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0, float(i)], dtype=np.float32)
         )
         camera_poses.append(pose)
 
@@ -313,7 +279,7 @@ def test_animated_scene_mismatched_camera_poses(tmp_path: Path):
             num_frames=num_frames,
             frame_rate=30.0,
             camera_intrinsics=camera_intrinsics,
-            camera_poses=camera_poses
+            camera_poses=camera_poses,
         )
 
 
@@ -326,8 +292,7 @@ def test_static_camera_scene_mismatched_frame_presences(tmp_path: Path):
     frame_presences = [[0, 4]]  # Only 1 presence for 2 bodies
 
     camera_pose = CameraPose(
-        rotation_matrix=np.eye(3, dtype=np.float32),
-        translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
+        rotation_matrix=np.eye(3, dtype=np.float32), translation=np.array([0.0, 0.0, -5.0], dtype=np.float32)
     )
 
     camera_intrinsics = CameraIntrinsics()
@@ -342,5 +307,58 @@ def test_static_camera_scene_mismatched_frame_presences(tmp_path: Path):
             num_frames=num_frames,
             frame_rate=30.0,
             camera_intrinsics=camera_intrinsics,
-            camera_pose=camera_pose
+            camera_pose=camera_pose,
         )
+
+
+# -------- Smpl buffer extraction --------
+def test_extract_single_smpl_buffer(tmp_path: Path):
+    """Test that extract_smpl_from_mcs returns SMPLCodec objects from a scene with only one body"""
+    from smplcodec.mcs import extract_smpl_from_mcs
+
+    # Create a test MCS file with a single body
+    out = tmp_path / "single_body_extract.mcs"
+    smpl_codecs = _dummy_smpl_codec(1)
+
+    exporter = SceneExporter()
+    exporter.export_single_frame(smpl_bodies=smpl_codecs, output_path=str(out))
+
+    # Extract SMPL bodies
+    extracted_codecs = extract_smpl_from_mcs(str(out))
+    # Verify we got exactly one SMPLCodec object
+    assert len(extracted_codecs) == 1
+    assert isinstance(extracted_codecs[0], SMPLCodec)
+
+    # Verify the data matches the original
+    original = smpl_codecs[0]
+    extracted = extracted_codecs[0]
+
+    assert extracted.frame_count == original.frame_count
+    assert extracted.frame_rate == original.frame_rate
+
+    # Verify body_translation is not None before comparison
+    assert original.body_translation is not None
+    assert extracted.body_translation is not None
+    assert np.allclose(extracted.body_translation, original.body_translation)
+
+    # Verify body_pose is not None before comparison
+    assert original.body_pose is not None
+    assert extracted.body_pose is not None
+    assert np.allclose(extracted.body_pose, original.body_pose)
+
+    # Test saving the extracted codecs
+    output_dir = tmp_path / "extracted_smpl"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for i, body in enumerate(extracted_codecs):
+        body.write(str(output_dir / f"smpl_body_{i}.smpl"))
+
+    # Verify the file was created
+    saved_file = output_dir / "smpl_body_0.smpl"
+    assert saved_file.exists()
+
+    # Verify we can load the saved file
+    loaded_codec = SMPLCodec.from_file(str(saved_file))
+    assert loaded_codec.frame_count == original.frame_count
+    assert original.body_translation is not None
+    assert loaded_codec.body_translation is not None
+    assert np.allclose(loaded_codec.body_translation, original.body_translation)
