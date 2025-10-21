@@ -1,15 +1,21 @@
 import base64
 import json
-import os
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple, Union
-
+import io
+import json
+import base64
+import logging
 import numpy as np
 import scipy as sp
+
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple, Union
 from numpy.typing import NDArray
 
+from .constants import cv_to_gltf_axis_correction
 from .codec import SMPLCodec
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 class CameraIntrinsics:
     """Represents camera intrinsic parameters."""
@@ -84,21 +90,12 @@ class CameraPose:
 
     def to_gltf_pose(self) -> Tuple[List[float], List[float]]:
         """Convert to GLTF translation and rotation (quaternion)."""
-        # Convert from CV to GLTF convention
-        cv_to_gltf = np.array(
-            [
-                [1.0, 0.0, 0.0],
-                [0.0, -1.0, 0.0],  # Flip Y (down to up)
-                [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
-            ],
-            dtype=np.float32,
-        )
 
         # Camera position in world coords: C = -R^T * t
         cam_pos = -self.rotation_matrix.T @ self.translation
 
         # Node rotation (world): R_world = R^T * cv_to_gltf
-        R_gltf = self.rotation_matrix.T @ cv_to_gltf
+        R_gltf = self.rotation_matrix.T @ cv_to_gltf_axis_correction
         quat_xyzw = sp.spatial.transform.Rotation.from_matrix(R_gltf).as_quat()
 
         return (
@@ -112,14 +109,7 @@ class MCSExporter:
 
     def __init__(self):
         """Initialize the MCS exporter."""
-        self._cv_to_gltf_matrix = np.array(
-            [
-                [1.0, 0.0, 0.0],
-                [0.0, -1.0, 0.0],  # Flip Y (down to up)
-                [0.0, 0.0, -1.0],  # Flip Z (forward to backward)
-            ],
-            dtype=np.float32,
-        )
+        self._cv_to_gltf_matrix = cv_to_gltf_axis_correction
 
     def _create_base_gltf(self, num_frames: int) -> Dict[str, Any]:
         """Create the base GLTF structure."""
@@ -342,7 +332,7 @@ class SceneExporter(MCSExporter):
 
         # Write file
         self._write_gltf(gltf, output_path)
-        print(f"Single-frame scene exported to {output_path}")
+        log.info(f"Single-frame scene exported to {output_path}")
 
     def export_animated_scene(
         self,
@@ -385,7 +375,7 @@ class SceneExporter(MCSExporter):
 
         # Write file
         self._write_gltf(gltf, output_path)
-        print(f"Animated scene exported to {output_path}")
+        log.info(f"Animated scene exported to {output_path}")
 
     def export_static_camera_scene(
         self,
@@ -433,7 +423,7 @@ class SceneExporter(MCSExporter):
 
         # Write file
         self._write_gltf(gltf, output_path)
-        print(f"Static camera scene exported to {output_path}")
+        log.info(f"Static camera scene exported to {output_path}")
 
 
 def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
@@ -446,9 +436,6 @@ def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
     Returns:
         List of SMPLCodec objects, one per body in the scene
     """
-    import io
-    import json
-    import base64
 
     # Load the GLTF data from the MCS file
     with open(mcs_file_path, "r", encoding="utf-8") as f:
@@ -458,7 +445,7 @@ def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
     scene_ext = gltf_data["scenes"][0]["extensions"]["MC_scene_description"]
     smpl_bodies = scene_ext["smpl_bodies"]
 
-    print(f"Found {len(smpl_bodies)} SMPL bodies in the MCS file")
+    log.debug(f"Found {len(smpl_bodies)} SMPL bodies in the MCS file")
 
     extracted_bodies = []
     for i, smpl_body in enumerate(smpl_bodies):
@@ -477,7 +464,7 @@ def extract_smpl_from_mcs(mcs_file_path: Union[str, Path]) -> List[SMPLCodec]:
             smpl_codec = SMPLCodec.from_file(buffer_io)  # type: ignore[arg-type]
             extracted_bodies.append(smpl_codec)
 
-            print(f"Extracted SMPL body {i}: {len(smpl_buffer)} bytes")
+            log.debug(f"Extracted SMPL body {i}: {len(smpl_buffer)} bytes")
         else:
             raise ValueError(f"Unexpected URI format in buffer {buffer_idx}: {uri}")
 
@@ -525,7 +512,4 @@ if __name__ == "__main__":
         exporter.export_single_frame([body], "example_custom_camera.mcs", camera_intrinsics, camera_pose)
 
     except FileNotFoundError:
-        print("Example SMPL file not found. Please ensure test/files/avatar.smpl exists.")
-        print("You can create a minimal example with:")
-        print("body = SMPLCodec()")
-        print("exporter.export_single_frame([body], 'example.mcs')")
+        log.error("Example SMPL file not found. Please ensure test/files/avatar.smpl exists")

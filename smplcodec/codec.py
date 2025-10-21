@@ -9,7 +9,6 @@ from typing import Optional
 from .utils import extract_item, coerce_type, matching, to_camel, to_snake, PathType
 from .version import MAJOR
 
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
