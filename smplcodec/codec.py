@@ -28,7 +28,8 @@ class SMPLVersion(IntEnum):
     SUPR = 3
     SMPLPP = 4
     SKEL = 5
-    SMPLXS = 6
+    SMIL = 6
+    SMPLXS = 7
 
     @classmethod
     def from_string(cls, value: str):
@@ -73,9 +74,10 @@ SMPLParamStructure = {
     ),
     SMPLVersion.SMPLPP: PoseParameterSizes(body_pose=(46,)),
     SMPLVersion.SKEL: PoseParameterSizes(body_pose=(46,)),
+    SMPLVersion.SMIL: PoseParameterSizes(body_pose=(24, 3)),
     SMPLVersion.SMPLXS: PoseParameterSizes(
         body_pose=(22, 3), head_pose=(3, 3), left_hand_pose=(15, 3), right_hand_pose=(15, 3)
-    ),
+    )
 }
 
 
@@ -86,7 +88,8 @@ SMPLVertexCount = {
     SMPLVersion.SUPR: 10475,
     SMPLVersion.SMPLPP: 35410,
     SMPLVersion.SKEL: 6890,
-    SMPLVersion.SMPLXS: 10475,
+    SMPLVersion.SMIL: 6890,
+    SMPLVersion.SMPLXS: 10475
 }
 
 
